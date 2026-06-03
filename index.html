@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thin Film SPC Analyzer — Pro Edition</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammerjs/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/1.2.1/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -294,6 +296,74 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
   .limit-row,.limits-thead{grid-template-columns:1fr 1fr}
   .limit-col-name{grid-column:1/-1}
 }
+
+/* ─── ZOOM CONTROLS ─── */
+.zoom-hint{font-size:10.5px;color:var(--text-muted);display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.zoom-hint span{display:flex;align-items:center;gap:4px}
+.btn-reset-zoom{padding:3px 10px;border-radius:5px;font-size:10.5px;font-weight:700;background:rgba(0,229,192,.1);border:.5px solid rgba(0,229,192,.3);color:var(--primary);cursor:pointer;transition:all .2s}
+.btn-reset-zoom:hover{background:rgba(0,229,192,.2)}
+
+/* ─── PROCESS CALCULATOR ─── */
+.calc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.2rem;margin-bottom:1.5rem}
+.calc-section{background:var(--card);border:.5px solid var(--border);border-radius:var(--radius);padding:1.3rem;position:relative}
+.calc-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);margin-bottom:1rem;display:flex;align-items:center;gap:7px}
+.calc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.6rem;padding:.5rem .6rem;border-radius:8px;transition:background .15s;position:relative}
+.calc-row:hover{background:rgba(255,255,255,.03)}
+.calc-row.highlight-row{background:rgba(0,229,192,.05);border:.5px solid rgba(0,229,192,.15)}
+.calc-label{font-size:12.5px;color:var(--text-dim);flex:1;min-width:130px;font-weight:500}
+.calc-label small{display:block;font-size:10px;color:var(--text-muted);margin-top:1px;font-weight:400}
+.calc-field{width:130px;flex-shrink:0;position:relative}
+.calc-input{width:100%;background:var(--card2);border:.5px solid var(--border2);border-radius:7px;padding:6px 10px;color:var(--text);font-size:13px;font-weight:600;outline:none;text-align:right;transition:border-color .2s,background .2s}
+.calc-input:focus{border-color:var(--primary);background:rgba(0,229,192,.04)}
+.calc-input.derived{background:transparent;border-color:transparent;color:var(--text);cursor:default}
+.calc-input.derived:focus{border-color:var(--border2);background:var(--card2);cursor:text}
+.calc-input.good-val{color:var(--success)}
+.calc-input.warn-val{color:var(--warning)}
+.calc-input.bad-val{color:var(--danger)}
+.calc-input.changed{border-color:var(--accent);background:rgba(124,106,247,.06);}
+.calc-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.cb-input{background:rgba(0,229,192,.1);color:var(--primary);border:.5px solid rgba(0,229,192,.2)}
+.cb-derived{background:rgba(124,106,247,.1);color:#9d8ffa;border:.5px solid rgba(124,106,247,.2)}
+.cb-reverse{background:rgba(245,166,35,.12);color:#f5b84e;border:.5px solid rgba(245,166,35,.2)}
+.calc-arrow{font-size:11px;color:var(--text-muted);flex-shrink:0;width:16px;text-align:center}
+.calc-formula{font-size:10px;color:var(--text-muted);font-family:monospace;margin-top:2px;padding:.3rem .6rem;background:rgba(0,0,0,.15);border-radius:5px;line-height:1.5}
+.reverse-panel{background:linear-gradient(135deg,rgba(245,166,35,.06),rgba(124,106,247,.06));border:.5px solid rgba(245,166,35,.2);border-radius:var(--radius);padding:1.3rem;margin-bottom:1.2rem}
+.reverse-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#f5b84e;margin-bottom:1rem;display:flex;align-items:center;gap:7px}
+.reverse-result{background:var(--card);border:.5px solid var(--border2);border-radius:10px;padding:1rem;margin-top:.8rem;font-size:13px;line-height:1.8;color:var(--text-dim)}
+.reverse-result strong{color:var(--text);font-weight:700}
+.reverse-result .rr-val{color:var(--primary);font-weight:800;font-size:15px}
+.calc-divider{height:.5px;background:var(--border);margin:.5rem 0}
+.calc-mode-toggle{display:flex;gap:6px;margin-bottom:1rem}
+.calc-mode-btn{padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:.5px solid var(--border2);background:transparent;color:var(--text-muted);transition:all .2s}
+.calc-mode-btn.active{background:rgba(0,229,192,.1);border-color:var(--primary);color:var(--primary)}
+.calc-info-box{background:var(--card2);border:.5px solid var(--border);border-radius:8px;padding:.8rem 1rem;font-size:11.5px;color:var(--text-dim);line-height:1.7;margin-bottom:1rem}
+.calc-info-box strong{color:var(--text)}
+.live-indicator{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--success);font-weight:700}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ─── INLINE EDITABLE VALUES ─── */
+.editable-val{
+  background:transparent;border:none;border-bottom:1.5px dashed rgba(255,255,255,.12);
+  color:inherit;font-size:inherit;font-weight:inherit;text-align:right;
+  width:110px;outline:none;cursor:pointer;padding:1px 4px;border-radius:0;
+  transition:border-color .2s,background .2s;font-family:inherit;
+}
+.editable-val:hover{border-bottom-color:var(--primary);background:rgba(0,229,192,.04);}
+.editable-val:focus{border-bottom-color:var(--primary);background:rgba(0,229,192,.07);border-radius:4px;cursor:text;}
+.editable-val.is-input{border-bottom-color:rgba(0,229,192,.5);color:var(--primary);}
+.editable-val.is-overridden{border-bottom-color:rgba(245,166,35,.6);color:#f5b84e;}
+.editable-val.is-readonly{border-bottom-color:transparent;cursor:default;color:inherit;}
+.editable-val.good{color:var(--success)}.editable-val.warn{color:var(--warning)}.editable-val.bad{color:var(--danger)}
+.cap-row{display:flex;align-items:center;justify-content:space-between;}
+.cap-row span:first-child{color:var(--text-dim);font-size:12.5px;}
+.edit-hint{font-size:9.5px;color:var(--text-muted);margin-top:.3rem;font-style:italic;padding:0 .2rem;}
+.reverse-hint{font-size:11px;color:#f5b84e;background:rgba(245,166,35,.08);border:.5px solid rgba(245,166,35,.2);border-radius:6px;padding:.4rem .7rem;margin-top:.5rem;display:none;}
+.spc-stat-row{display:flex;align-items:center;justify-content:space-between;padding:.35rem .5rem;border-radius:6px;font-size:12.5px;}
+.spc-stat-row:hover{background:rgba(255,255,255,.03);}
+.spc-stat-row span:first-child{color:var(--text-dim);}
+.overview-edit-panel{background:var(--card2);border:.5px solid var(--border);border-radius:10px;padding:.9rem 1rem;margin-bottom:1rem;}
+.overview-edit-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:.6rem;}
 </style>
 </head>
 <body>
@@ -378,7 +448,7 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
       <div class="top-bar-logo">⬡</div>
       <div>
         <div class="top-bar-title">Thin Film SPC Dashboard</div>
-        <div class="top-bar-file"><span class="dot"></span><span id="file-label">—</span></div>
+        <div class="top-bar-file"><span class="dot"></span><span id="file-label">—</span><span id="perf-badge" style="margin-left:8px;font-size:10px;color:var(--text-muted);display:none">⚡ <span id="perf-ms"></span>ms</span></div>
       </div>
     </div>
     <div class="top-bar-actions">
@@ -406,6 +476,11 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
 
     <!-- OVERVIEW -->
     <div class="tab-content active" id="tab-overview">
+      <div class="overview-edit-panel" id="overview-edit-strip">
+        <div class="overview-edit-title">✏️ Override process parameters — recalculates all charts</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;" id="overview-edit-inputs"></div>
+        <div class="reverse-hint" id="overview-reverse-hint" style="display:none;margin-top:.5rem"></div>
+      </div>
       <div class="metrics" id="overview-metrics"></div>
       <div class="row-2" style="margin-bottom:1.2rem">
         <div class="chart-card" style="margin-bottom:0">
@@ -419,6 +494,7 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
             <span class="leg"><span class="leg-dot" style="background:#7c6af7"></span>Mean</span>
             <span class="leg"><span class="leg-dot" style="background:#f5a623;height:3px"></span>USL/LSL</span>
           </div>
+          <div class="zoom-hint"><span>🔍 Scroll to zoom</span><button class="btn-reset-zoom" onclick="resetZoom('ichart-overview')">⟳ Reset</button></div>
           <div style="position:relative;height:220px"><canvas id="ichart-overview" role="img" aria-label="I-chart"></canvas></div>
         </div>
         <div class="chart-card" style="margin-bottom:0">
@@ -474,6 +550,8 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
         <button class="btn-sm" onclick="clearBaseline()" id="btn-clear-baseline" style="display:none">✕ Clear</button>
       </div>
       <!-- Sigma zones legend -->
+      <!-- SPC editable stats strip -->
+      <div id="spc-stats-strip" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.6rem;padding:.6rem .8rem;background:var(--card2);border-radius:9px;border:.5px solid var(--border);align-items:center;font-size:12px;"></div>
       <div class="sigma-legend">
         <span class="sigma-leg"><span class="sigma-swatch" style="background:rgba(240,78,78,0.5)"></span>±3σ UCL/LCL</span>
         <span class="sigma-leg"><span class="sigma-swatch" style="background:rgba(245,166,35,0.5)"></span>±2σ Zone</span>
@@ -492,6 +570,7 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
           <div class="chart-title" id="spc-chart-title">I-Chart</div>
           <div class="chart-meta" id="spc-chart-meta"></div>
         </div>
+        <div class="zoom-hint"><span>🔍 Scroll to zoom</span><span>✋ Drag to pan</span><span>📱 Pinch</span><button class="btn-reset-zoom" onclick="resetZoom('spc-main-chart')">⟳ Reset</button></div>
         <div style="position:relative;height:300px"><canvas id="spc-main-chart" role="img" aria-label="SPC chart"></canvas></div>
       </div>
       <div class="chart-card" id="spc-mr-card">
@@ -503,6 +582,7 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
           <span class="sigma-leg"><span class="sigma-swatch" style="background:rgba(240,78,78,0.7)"></span>UCL (3.267×MR̄)</span>
           <span class="sigma-leg"><span class="sigma-swatch" style="background:#7c6af7"></span>MR values</span>
         </div>
+        <div class="zoom-hint"><span>🔍 Scroll to zoom</span><button class="btn-reset-zoom" onclick="resetZoom('spc-mr-chart')">⟳ Reset</button></div>
         <div style="position:relative;height:160px"><canvas id="spc-mr-chart" role="img" aria-label="MR chart"></canvas></div>
       </div>
     </div>
@@ -519,33 +599,37 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
       <div class="cap-grid">
         <div class="cap-card">
           <div class="cap-title">🎯 Short-term (Cp / Cpk)</div>
-          <div class="cap-row"><span>Cp</span><span id="cap-cp">—</span></div>
-          <div class="cap-row"><span>Cpk</span><span id="cap-cpk">—</span></div>
-          <div class="cap-row"><span>CPU</span><span id="cap-cpu">—</span></div>
-          <div class="cap-row"><span>CPL</span><span id="cap-cpl">—</span></div>
+          <div class="cap-row"><span>Cp</span><input class="editable-val is-readonly" id="cap-cp" value="—" title="Cp = (USL−LSL)/(6×σw)" readonly></div>
+          <div class="cap-row"><span>Cpk ✏️</span><input class="editable-val" id="cap-cpk" value="—" title="Edit to find required σ for this Cpk" onchange="handleCapEdit('cpk',this.value)" onfocus="this.select()"></div>
+          <div class="cap-row"><span>CPU</span><input class="editable-val is-readonly" id="cap-cpu" value="—" readonly></div>
+          <div class="cap-row"><span>CPL</span><input class="editable-val is-readonly" id="cap-cpl" value="—" readonly></div>
           <div class="cap-gauge"><div class="cap-gauge-fill" id="cap-gauge-st" style="width:0%"></div></div>
+          <div class="edit-hint">✏️ Edit Cpk to solve for required σ</div>
+          <div class="reverse-hint" id="cap-reverse-cpk"></div>
         </div>
         <div class="cap-card">
           <div class="cap-title">📈 Long-term (Pp / Ppk)</div>
-          <div class="cap-row"><span>Pp</span><span id="cap-pp">—</span></div>
-          <div class="cap-row"><span>Ppk</span><span id="cap-ppk">—</span></div>
-          <div class="cap-row"><span>PPU</span><span id="cap-ppu">—</span></div>
-          <div class="cap-row"><span>PPL</span><span id="cap-ppl">—</span></div>
+          <div class="cap-row"><span>Pp</span><input class="editable-val is-readonly" id="cap-pp" value="—" readonly></div>
+          <div class="cap-row"><span>Ppk ✏️</span><input class="editable-val" id="cap-ppk" value="—" title="Edit to find required σ for this Ppk" onchange="handleCapEdit('ppk',this.value)" onfocus="this.select()"></div>
+          <div class="cap-row"><span>PPU</span><input class="editable-val is-readonly" id="cap-ppu" value="—" readonly></div>
+          <div class="cap-row"><span>PPL</span><input class="editable-val is-readonly" id="cap-ppl" value="—" readonly></div>
           <div class="cap-gauge"><div class="cap-gauge-fill" id="cap-gauge-lt" style="width:0%"></div></div>
+          <div class="edit-hint">✏️ Edit Ppk to solve for required σ</div>
+          <div class="reverse-hint" id="cap-reverse-ppk"></div>
         </div>
         <div class="cap-card">
           <div class="cap-title">📐 Process Statistics</div>
-          <div class="cap-row"><span>Mean</span><span id="cap-mean">—</span></div>
-          <div class="cap-row"><span>σ within</span><span id="cap-sw">—</span></div>
-          <div class="cap-row"><span>σ overall</span><span id="cap-so">—</span></div>
-          <div class="cap-row"><span>Sigma level</span><span id="cap-sl">—</span></div>
+          <div class="cap-row"><span>Mean ✏️</span><input class="editable-val is-input" id="cap-mean" value="—" title="Edit mean to see capability impact" onchange="handleCapEdit('mean',this.value)" onfocus="this.select()"></div>
+          <div class="cap-row"><span>σ within ✏️</span><input class="editable-val is-input" id="cap-sw" value="—" title="Edit σ_within to recalculate all capability" onchange="handleCapEdit('sw',this.value)" onfocus="this.select()"></div>
+          <div class="cap-row"><span>σ overall ✏️</span><input class="editable-val is-input" id="cap-so" value="—" title="Edit σ_overall to recalculate Pp/Ppk" onchange="handleCapEdit('so',this.value)" onfocus="this.select()"></div>
+          <div class="cap-row"><span>Sigma level ✏️</span><input class="editable-val" id="cap-sl" value="—" title="Edit sigma level to find required Cpk and σ" onchange="handleCapEdit('sl',this.value)" onfocus="this.select()"></div>
         </div>
         <div class="cap-card">
           <div class="cap-title">🔢 Defects / PPM</div>
-          <div class="cap-row"><span>Theoretical PPM</span><span id="cap-ppmt">—</span></div>
-          <div class="cap-row"><span>Observed PPM</span><span id="cap-ppmo">—</span></div>
-          <div class="cap-row"><span>Skewness</span><span id="cap-skew">—</span></div>
-          <div class="cap-row"><span>Spec width</span><span id="cap-spec">—</span></div>
+          <div class="cap-row"><span>Theo. PPM ✏️</span><input class="editable-val" id="cap-ppmt" value="—" title="Edit PPM to find required σ" onchange="handleCapEdit('ppmt',this.value)" onfocus="this.select()"></div>
+          <div class="cap-row"><span>Observed PPM</span><input class="editable-val is-readonly" id="cap-ppmo" value="—" readonly></div>
+          <div class="cap-row"><span>Skewness</span><input class="editable-val is-readonly" id="cap-skew" value="—" readonly></div>
+          <div class="cap-row"><span>Spec width</span><input class="editable-val is-readonly" id="cap-spec" value="—" readonly></div>
         </div>
       </div>
       <div class="chart-card">
@@ -575,6 +659,7 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
           <select class="q-select" id="scatter-y" style="width:180px" onchange="renderScatter()"></select>
           <div id="scatter-r" style="align-self:center;font-size:12px;color:var(--text-dim)"></div>
         </div>
+        <div class="zoom-hint"><span>🔍 Scroll to zoom</span><span>✋ Drag to pan</span><button class="btn-reset-zoom" onclick="resetZoom('scatter-chart')">⟳ Reset</button></div>
         <div style="position:relative;height:260px"><canvas id="scatter-chart" role="img" aria-label="Scatter plot"></canvas></div>
       </div>
     </div>
@@ -835,6 +920,7 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
           <span class="sigma-leg"><span class="sigma-swatch" style="background:rgba(240,78,78,0.6)"></span>UCL/LCL</span>
           <span class="sigma-leg"><span class="sigma-swatch" style="background:rgba(124,106,247,.5)"></span>Baseline (if locked)</span>
         </div>
+        <div class="zoom-hint"><span>🔍 Scroll to zoom</span><span>✋ Drag to pan</span><button class="btn-reset-zoom" onclick="resetZoom('trend-chart')">⟳ Reset</button></div>
         <div style="position:relative;height:300px"><canvas id="trend-chart"></canvas></div>
       </div>
       <div class="row-2">
@@ -892,26 +978,39 @@ body{background:var(--dark);color:var(--text);font-family:'Segoe UI',system-ui,-
 </div><!-- end dashboard -->
 
 <script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ─── STATE ───
 let uploadedData=[],numCols=[],allCols=[],fileName='';
 let primaryCol='',USL=null,LSL=null,TARGET=null;
 let activeCol=''; // single source of truth — all tabs follow this
 let paramLimits={};
 let chartInstances={};
-let fishboneCauses={Machine:[],Method:[],Material:[],Man:[],Measurement:[],Environment:[]};
-let activeRules={r1:true,r2:true,r3:true,r5:true};
-let baselineData={locked:false,mean:null,sw:null,ucl:null,lcl:null,col:null};
-let fmeaRows=[],fmeaCounter=0;
-let factorialFactors=[];
-let compareDataA=null,compareDataB=null,compareColsA=[],compareColsB=[];
+const _overrides = {}; // override state — user-typed values differ from data
 
 // ─── FILE HANDLING ───
 const fileInput=document.getElementById('file-input');
 const dropZone=document.getElementById('drop-zone');
-dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over')});
-dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag-over');handleFile(e.dataTransfer.files[0])});
-fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+if(dropZone){
+  dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over')});
+  dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag-over');handleFile(e.dataTransfer.files[0])});
+}
+if(fileInput){
+  fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+}
 
 function handleFile(file){
   if(!file)return;
@@ -919,26 +1018,43 @@ function handleFile(file){
   const ext=file.name.split('.').pop().toLowerCase();
   const reader=new FileReader();
   if(ext==='csv'){
-    reader.onload=e=>{Papa.parse(e.target.result,{header:true,dynamicTyping:true,complete:r=>{
-      uploadedData=r.data.filter(row=>Object.values(row).some(v=>v!==null&&v!==''));
-      processData();
-    }})};
+    reader.onload=e=>{Papa.parse(e.target.result,{
+      header:true, dynamicTyping:true,
+      skipEmptyLines:true,
+      complete:r=>{
+        uploadedData=r.data.filter(row=>Object.values(row).some(v=>v!==null&&v!==''));
+        processData();
+      },
+      error:err=>alert('Error parsing CSV: '+err.message)
+    })};
+    reader.onerror=()=>alert('Could not read file. Please try again.');
     reader.readAsText(file);
   }else{
     reader.onload=e=>{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      uploadedData=XLSX.utils.sheet_to_json(ws).filter(row=>Object.values(row).some(v=>v!==null&&v!==''));
-      processData();
+      try{
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        uploadedData=XLSX.utils.sheet_to_json(ws).filter(row=>Object.values(row).some(v=>v!==null&&v!==''));
+        processData();
+      }catch(err){
+        alert('Error reading Excel file: '+err.message+'. Please try saving as CSV and uploading that instead.');
+      }
     };
+    reader.onerror=()=>alert('Could not read file. Please try again.');
     reader.readAsArrayBuffer(file);
   }
 }
 
 function processData(){
+  invalidateCacheFull(); // new file — clear all cached data
   allCols=Object.keys(uploadedData[0]||{});
   numCols=allCols.filter(c=>uploadedData.slice(0,20).filter(r=>typeof r[c]==='number').length>10);
   if(!numCols.length){alert('No numeric columns detected. Please check your file.');return;}
+  // Large file safeguard
+  if(uploadedData.length > 5000){
+    const proceed = confirm(`Large dataset: ${uploadedData.length} rows detected.\nThe app will show up to ${MAX_CHART_POINTS} points per chart for performance.\nAll statistics will use the full dataset.\nContinue?`);
+    if(!proceed){uploadedData=[];return;}
+  }
   paramLimits={};
   numCols.forEach(c=>{paramLimits[c]={usl:null,lsl:null,target:null}});
   populateClarifyModal();
@@ -998,9 +1114,7 @@ function resetApp(){
   fishboneCauses={Machine:[],Method:[],Material:[],Man:[],Measurement:[],Environment:[]};
 }
 
-// ─── COLUMN SYNC — single source of truth ───
-// Call this whenever any tab's column dropdown changes.
-// It updates activeCol, syncs ALL other dropdowns, re-renders the currently visible tab.
+// ─── COLUMN SYNC — debounced single source of truth ───
 function syncCol(newCol){
   if(!newCol||newCol===activeCol)return;
   activeCol=newCol;
@@ -1029,7 +1143,17 @@ function renderTabById(name){
     doe:renderDOETab, rca:renderRCATab, tools:renderToolsTab,
     insights:renderInsightsTab, wafer:renderWaferTab, trend:renderTrendTab
   };
-  if(map[name])map[name]();
+  if(!map[name]) return;
+  const t0 = performance.now();
+  map[name]();
+  const ms = (performance.now()-t0).toFixed(1);
+  const badge = document.getElementById('perf-badge');
+  const msEl = document.getElementById('perf-ms');
+  if(badge && msEl){ msEl.textContent=ms; badge.style.display=''; }
+  // Force all charts in active tab to resize correctly after render
+  setTimeout(()=>{
+    Object.values(chartInstances).forEach(c=>{try{c.resize();}catch(e){}});
+  }, 50);
 }
 
 function populateSelectors(){
@@ -1078,7 +1202,7 @@ function saveLimits(){
   // Keep global USL/LSL/TARGET in sync with primaryCol limits
   if(paramLimits[primaryCol]){USL=paramLimits[primaryCol].usl;LSL=paramLimits[primaryCol].lsl;TARGET=paramLimits[primaryCol].target;}
   closeLimitsModal();
-  // Re-render ALL data tabs so every tab reflects new limits immediately
+  invalidateCache(); // limits changed — bust computed cache only
   renderAllTabs();
   showToast('✅ Limits saved — all tabs updated');
 }
@@ -1094,7 +1218,11 @@ function showToast(msg){
 function getLimits(col){return paramLimits[col]||{usl:null,lsl:null,target:null};}
 
 // ─── MATH ───
-function getVals(col){return uploadedData.map(r=>r[col]).filter(v=>typeof v==='number')}
+function getVals(col){
+  // Use cache when data is loaded, fallback for early calls
+  if(uploadedData.length) return cachedVals(col);
+  return uploadedData.map(r=>r[col]).filter(v=>typeof v==='number');
+}
 function avg(arr){if(!arr||!arr.length)return 0;return arr.reduce((a,b)=>a+b,0)/arr.length}
 function stdOverall(arr){if(!arr||arr.length<2)return 0;const m=avg(arr);return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/(arr.length-1))}
 function sigmaW(arr){if(!arr||arr.length<2)return 0;const mr=arr.slice(1).map((v,i)=>Math.abs(v-arr[i]));const mrAvg=mr.reduce((a,b)=>a+b,0)/mr.length;return mrAvg/1.128}
@@ -1105,8 +1233,10 @@ function pearsonR(xs,ys){const n=xs.length,mx=avg(xs),my=avg(ys),num=xs.reduce((
 const fmtN=v=>typeof v==='number'?(Math.abs(v)>1000?v.toFixed(1):Math.abs(v)>100?v.toFixed(2):v.toFixed(4)):String(v||'—');
 const fmtV=v=>typeof v==='number'?(Math.abs(v)>1000?v.toFixed(0):Math.abs(v)>100?v.toFixed(1):v.toFixed(4)):(v??'—');
 
-function calcCap(vals,usl,lsl,target){
-  const m=avg(vals),sw=sigmaW(vals),so=stdOverall(vals);
+function calcCap(vals,usl,lsl,target,overrideMean,overrideSW,overrideSO){
+  const m  = overrideMean ?? avg(vals);
+  const sw = overrideSW   ?? sigmaW(vals);
+  const so = overrideSO   ?? stdOverall(vals);
   const cp=(usl&&lsl&&sw>0)?(usl-lsl)/(6*sw):null;
   const cpu=usl&&sw>0?(usl-m)/(3*sw):null,cpl=lsl&&sw>0?(m-lsl)/(3*sw):null;
   const cpk=(cpu!==null&&cpl!==null)?Math.min(cpu,cpl):(cpu!=null?cpu:cpl);
@@ -1132,12 +1262,118 @@ function detectVioConfigured(vals,ucl,lcl,m){
   return vios;
 }
 
+// ─── PERFORMANCE: CACHE LAYER ───
+const _cache = {};
+let _cacheVersion = 0;
+function _cacheKey(col,...rest){return col+'|'+_cacheVersion+'|'+rest.join('|');}
+function cachedVals(col){
+  const k='vals|'+col;
+  if(!_cache[k])_cache[k]=uploadedData.map(r=>r[col]).filter(v=>typeof v==='number');
+  return _cache[k];
+}
+function cachedStats(col){
+  const k=_cacheKey(col,'stats');
+  if(_cache[k])return _cache[k];
+  const vals=cachedVals(col);
+  const m=avg(vals),so=stdOverall(vals),sw=sigmaW(vals);
+  const ucl=m+3*sw,lcl=m-3*sw;
+  const lim=getLimits(col);
+  const cap=calcCap(vals,lim.usl,lim.lsl,lim.target);
+  const vios=detectVioConfigured(vals,ucl,lcl,m);
+  return (_cache[k]={vals,m,so,sw,ucl,lcl,lim,cap,vios});
+}
+function invalidateCache(){
+  Object.keys(_cache).forEach(k=>{if(!k.startsWith('vals|'))delete _cache[k];});
+  _cacheVersion++;
+}
+function invalidateCacheFull(){
+  Object.keys(_cache).forEach(k=>delete _cache[k]);
+  _cacheVersion++;
+}
+
+// ─── PERFORMANCE: CHART POOL ───
+const _chartPool={};
+function poolChart(id,config){
+  // Destroy existing instance cleanly before recreating
+  // (Chart.js v4 options reassignment is unreliable — destroy+recreate is safest)
+  if(_chartPool[id]){try{_chartPool[id].destroy();}catch(e){}delete _chartPool[id];}
+  if(chartInstances[id]){try{chartInstances[id].destroy();}catch(e){}delete chartInstances[id];}
+  const canvas=document.getElementById(id);if(!canvas)return null;
+  const inst=new Chart(canvas,config);
+  chartInstances[id]=inst;_chartPool[id]=inst;
+  return inst;
+}
+
+// ─── PERFORMANCE: LAZY TABS + DECIMATION ───
+const _tabInitialized={};
+const MAX_CHART_POINTS=99999; // decimation disabled — show all points
+function decimate(arr,maxPts){
+  if(arr.length<=maxPts)return{data:arr,labels:arr.map((_,i)=>i+1),step:1};
+  const step=Math.ceil(arr.length/maxPts);
+  const data=[],labels=[];
+  for(let i=0;i<arr.length;i+=step){data.push(arr[i]);labels.push(i+1);}
+  return{data,labels,step};
+}
+
+let fishboneCauses={Machine:[],Method:[],Material:[],Man:[],Measurement:[],Environment:[]};
+let activeRules={r1:true,r2:true,r3:true,r5:true};
+let baselineData={locked:false,mean:null,sw:null,ucl:null,lcl:null,col:null};
+let fmeaRows=[],fmeaCounter=0;
+let factorialFactors=[];
+let compareDataA=null,compareDataB=null,compareColsA=[],compareColsB=[];
+
+
 // ─── CHART HELPERS ───
-function destroyChart(id){if(chartInstances[id]){try{chartInstances[id].destroy()}catch(e){}delete chartInstances[id]}}
-function makeChart(id,config){destroyChart(id);const c=document.getElementById(id);if(!c)return null;try{chartInstances[id]=new Chart(c,config);return chartInstances[id]}catch(e){console.error('Chart error',id,e);return null}}
+function destroyChart(id){
+  if(_chartPool[id]){try{_chartPool[id].destroy()}catch(e){}delete _chartPool[id];}
+  if(chartInstances[id]){try{chartInstances[id].destroy()}catch(e){}delete chartInstances[id];}
+}
+function makeChart(id,config){
+  // Use poolChart to reuse existing instance when possible
+  return poolChart(id, config);
+}
 const gc='rgba(255,255,255,0.05)',tc='#4a5568';
-const baseScales={x:{ticks:{color:tc,maxTicksLimit:12},grid:{color:gc}},y:{ticks:{color:tc},grid:{color:gc}}};
+const baseScales={x:{ticks:{color:tc,maxTicksLimit:12,sampleSize:20,maxRotation:0},grid:{color:gc}},y:{ticks:{color:tc,sampleSize:10},grid:{color:gc}}};
 const pluginsDef={legend:{display:false},tooltip:{backgroundColor:'rgba(17,24,39,0.92)',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#8898aa',padding:10,cornerRadius:8}};
+
+// ─── ZOOM PLUGIN CONFIG ───
+// Line/SPC charts: scroll-wheel zoom on X axis, drag to pan, pinch on mobile
+const zoomLine={
+  zoom:{wheel:{enabled:true,speed:0.08},pinch:{enabled:true},mode:'x',
+    onZoomComplete:({chart})=>showResetBtn(chart)},
+  pan:{enabled:true,mode:'x',threshold:5,
+    onPanComplete:({chart})=>showResetBtn(chart)}
+};
+// Bar/scatter: zoom both axes
+const zoomBoth={
+  zoom:{wheel:{enabled:true,speed:0.08},pinch:{enabled:true},mode:'xy',
+    onZoomComplete:({chart})=>showResetBtn(chart)},
+  pan:{enabled:true,mode:'xy',threshold:5}
+};
+
+// Map chartId → its reset button element
+const _zoomedCharts = new WeakMap();
+function showResetBtn(chart){_zoomedCharts.set(chart,true);}
+
+function resetZoom(canvasId){
+  const chart = chartInstances[canvasId];
+  if(chart && chart.resetZoom) chart.resetZoom();
+}
+
+// Inject zoom hint row above a chart canvas
+function zoomHintHTML(canvasId){
+  return `<div class="zoom-hint">
+    <span>🔍 Scroll to zoom</span>
+    <span>✋ Drag to pan</span>
+    <span>📱 Pinch on mobile</span>
+    <button class="btn-reset-zoom" onclick="resetZoom('${canvasId}')">⟳ Reset zoom</button>
+  </div>`;
+}
+
+// ─── GLOBAL CHART.JS PERFORMANCE DEFAULTS ───
+Chart.defaults.animation = false;          // no animations — charts snap instantly
+Chart.defaults.transitions = {};           // disable update transitions
+// NOTE: parsing:false removed — causes blank charts with color arrays and Chart.js v4 internals
 
 // ─── WE RULES CONFIGURATOR ───
 const WE_RULES=[
@@ -1183,30 +1419,34 @@ function renderSPCTab(){
   const chartType=document.getElementById('spc-chart-type')?.value||'ichart';
   const sgEl=document.getElementById('subgroup-size-group');
   if(sgEl)sgEl.style.display=(chartType==='xbar')?'flex':'none';
-  const lim=getLimits(col);
-  const vals=getVals(col);
+  const {vals,m,sw,ucl,lcl,lim,usl,lsl,so}=getActiveParams(col);
   if(!vals.length)return;
-  const m=avg(vals),sw=sigmaW(vals),ucl=m+3*sw,lcl=m-3*sw;
   const s1u=m+sw,s1l=m-sw,s2u=m+2*sw,s2l=m-2*sw;
+  // Update stats strip with current override-aware values
+  const _r=calcAllFromParams(m,sw,so,usl,lsl);
+  updateSPCStatsStrip(_r);
   const inlineDiv=document.getElementById('spc-limits-inline');
   if(inlineDiv)inlineDiv.innerHTML=`<div style="font-size:11px;color:var(--text-dim);background:var(--card2);padding:6px 12px;border-radius:7px;border:.5px solid var(--border)">USL:<strong>${lim.usl!=null?fmtN(lim.usl):'—'}</strong> LSL:<strong>${lim.lsl!=null?fmtN(lim.lsl):'—'}</strong> <span style="margin-left:6px;color:var(--primary);cursor:pointer" onclick="openLimitsModal()">✏️ Edit</span></div>`;
 
   if(chartType==='ichart'){
     document.getElementById('spc-chart-title').textContent=col+' — I-Chart with 1σ 2σ 3σ zones';
-    document.getElementById('spc-chart-meta').textContent=`UCL=${fmtN(ucl)}  +2σ=${fmtN(s2u)}  Mean=${fmtN(m)}  LCL=${fmtN(lcl)}`;
-    const vio=vals.map(v=>(v>ucl||v<lcl)?v:null);
+    document.getElementById('spc-chart-meta').textContent=`UCL=${fmtN(ucl)}  +2σ=${fmtN(s2u)}  Mean=${fmtN(m)}  LCL=${fmtN(lcl)}  [${vals.length} pts]`;
+    // Show ALL points — every wafer matters for process control
+    const dVals = vals;
+    const dLabels = vals.map((_,i)=>i+1);
+    const vio=dVals.map(v=>(v>ucl||v<lcl)?v:null);
     const vioDetails=detectVioConfigured(vals,ucl,lcl,m);
     const vioMap={};vioDetails.forEach(v=>{if(!vioMap[v.point])vioMap[v.point]=[];vioMap[v.point].push(v.rule+': '+v.desc);});
     const ds=[
-      {data:Array(vals.length).fill(ucl),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'UCL(3σ)',tension:0},
-      {data:Array(vals.length).fill(lcl),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'LCL(3σ)',tension:0},
-      {data:Array(vals.length).fill(s2u),borderColor:'rgba(245,166,35,0.6)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'+2σ',tension:0},
-      {data:Array(vals.length).fill(s2l),borderColor:'rgba(245,166,35,0.6)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'-2σ',tension:0},
-      {data:Array(vals.length).fill(s1u),borderColor:'rgba(46,204,113,0.5)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'+1σ',tension:0},
-      {data:Array(vals.length).fill(s1l),borderColor:'rgba(46,204,113,0.5)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'-1σ',tension:0},
-      {data:Array(vals.length).fill(m),borderColor:'rgba(124,106,247,0.7)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'Mean',tension:0},
-      {data:vals,borderColor:'#00e5c0',borderWidth:2,pointRadius:3,pointBackgroundColor:vals.map((v,i)=>vio[i]?'#f04e4e':'#00e5c0'),fill:false,tension:.1,label:col},
-      {data:vio,borderColor:'transparent',pointRadius:7,pointBackgroundColor:'rgba(240,78,78,0.9)',showLine:false,label:'OOC'},
+      {data:Array(dVals.length).fill(ucl),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'UCL(3σ)',tension:0},
+      {data:Array(dVals.length).fill(lcl),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'LCL(3σ)',tension:0},
+      {data:Array(dVals.length).fill(s2u),borderColor:'rgba(245,166,35,0.6)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'+2σ',tension:0},
+      {data:Array(dVals.length).fill(s2l),borderColor:'rgba(245,166,35,0.6)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'-2σ',tension:0},
+      {data:Array(dVals.length).fill(s1u),borderColor:'rgba(46,204,113,0.5)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'+1σ',tension:0},
+      {data:Array(dVals.length).fill(s1l),borderColor:'rgba(46,204,113,0.5)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'-1σ',tension:0},
+      {data:Array(dVals.length).fill(m),borderColor:'rgba(124,106,247,0.7)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'Mean',tension:0},
+      {data:dVals,borderColor:'#00e5c0',borderWidth:1.5,pointRadius:vals.length>200?0:2.5,pointBackgroundColor:dVals.map((v,i)=>vio[i]?'#f04e4e':'#00e5c0'),fill:false,tension:.05,label:col},
+      {data:vio,borderColor:'transparent',pointRadius:6,pointBackgroundColor:'rgba(240,78,78,0.9)',showLine:false,label:'OOC'},
     ];
     if(lim.usl!=null)ds.push({data:Array(vals.length).fill(lim.usl),borderColor:'rgba(245,166,35,0.9)',borderWidth:2,borderDash:[8,4],pointRadius:0,fill:false,label:'USL',tension:0});
     if(lim.lsl!=null)ds.push({data:Array(vals.length).fill(lim.lsl),borderColor:'rgba(245,166,35,0.9)',borderWidth:2,borderDash:[8,4],pointRadius:0,fill:false,label:'LSL',tension:0});
@@ -1215,7 +1455,7 @@ function renderSPCTab(){
       ds.push({data:Array(vals.length).fill(baselineData.lcl),borderColor:'rgba(124,106,247,0.4)',borderWidth:1,borderDash:[3,2],pointRadius:0,fill:false,label:'Base LCL',tension:0});
       ds.push({data:Array(vals.length).fill(baselineData.mean),borderColor:'rgba(124,106,247,0.6)',borderWidth:1.5,borderDash:[4,2],pointRadius:0,fill:false,label:'Base Mean',tension:0});
     }
-    makeChart('spc-main-chart',{type:'line',data:{labels:vals.map((_,i)=>i+1),datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},tooltip:{...pluginsDef.tooltip,callbacks:{label:ctx=>{if(ctx.dataset.label===col){const note=vioMap[ctx.dataIndex+1];return note?`${col}: ${fmtN(ctx.parsed.y)} ⚠️ ${note.join('; ')}`:`${col}: ${fmtN(ctx.parsed.y)}`}return null}}}},scales:baseScales}});
+    makeChart('spc-main-chart',{type:'line',data:{labels:dLabels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},zoom:zoomLine,tooltip:{...pluginsDef.tooltip,callbacks:{label:ctx=>{if(ctx.dataset.label===col){const note=vioMap[ctx.dataIndex+1];return note?`${col}: ${fmtN(ctx.parsed.y)} ⚠️ ${note.join('; ')}`:`${col}: ${fmtN(ctx.parsed.y)}`}return null}}}},scales:baseScales}});
     document.getElementById('spc-mr-card').style.display='block';
     const mrVals=movRange(vals),mrMean=avg(mrVals),mrUCL=3.267*mrMean;
     const mrMetaEl=document.getElementById('spc-mr-meta');if(mrMetaEl)mrMetaEl.textContent=`MR̄=${fmtN(mrMean)}  UCL=${fmtN(mrUCL)}`;
@@ -1223,7 +1463,7 @@ function renderSPCTab(){
       {data:Array(mrVals.length).fill(mrUCL),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'UCL',tension:0},
       {data:Array(mrVals.length).fill(mrMean),borderColor:'rgba(124,106,247,0.5)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'MR̄',tension:0},
       {data:mrVals,borderColor:'#7c6af7',borderWidth:1.5,borderDash:[4,2],pointRadius:3,pointBackgroundColor:mrVals.map(v=>v>mrUCL?'#f04e4e':'#7c6af7'),fill:false,tension:.1,label:'MR'}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:baseScales}});
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},zoom:zoomLine},scales:baseScales}});
   }else if(chartType==='cusum'){
     document.getElementById('spc-chart-title').textContent=col+' — CUSUM';
     document.getElementById('spc-chart-meta').textContent='Cumulative sum — detects small mean shifts';
@@ -1233,7 +1473,7 @@ function renderSPCTab(){
       {data:Array(vals.length).fill(h),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'H(UCL)'},
       {data:cpArr,borderColor:'#00e5c0',borderWidth:2,pointRadius:1.5,fill:false,tension:.1,label:'C⁺'},
       {data:cmArr,borderColor:'#7c6af7',borderWidth:2,pointRadius:1.5,fill:false,tension:.1,label:'C⁻'}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:true,labels:{color:'#8898aa',boxWidth:10}}},scales:baseScales}});
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:true,labels:{color:'#8898aa',boxWidth:10}},zoom:zoomLine},scales:baseScales}});
     document.getElementById('spc-mr-card').style.display='none';
   }else if(chartType==='ewma'){
     document.getElementById('spc-chart-title').textContent=col+' — EWMA (λ=0.2)';
@@ -1245,7 +1485,7 @@ function renderSPCTab(){
       {data:fac.map(f=>m-L*sw*f),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'LCL'},
       {data:Array(vals.length).fill(m),borderColor:'rgba(124,106,247,0.6)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'Mean'},
       {data:zArr,borderColor:'#00e5c0',borderWidth:2,pointRadius:2,fill:false,tension:.1,label:'EWMA'}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:true,labels:{color:'#8898aa',boxWidth:10}}},scales:baseScales}});
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:true,labels:{color:'#8898aa',boxWidth:10}},zoom:zoomLine},scales:baseScales}});
     document.getElementById('spc-mr-card').style.display='none';
   }else if(chartType==='xbar'){
     document.getElementById('spc-chart-title').textContent=col+' — Xbar-R Chart';
@@ -1291,11 +1531,9 @@ function renderSPCTab(){
 // ─── OVERVIEW TAB ───
 function renderOverviewTab(){
   const col=activeCol||primaryCol;
-  const vals=getVals(col);if(!vals.length)return;
-  const m=avg(vals),sw=sigmaW(vals),ucl=m+3*sw,lcl=m-3*sw;
-  const lim=getLimits(col);
-  const cap=calcCap(vals,lim.usl,lim.lsl,lim.target);
-  const vios=detectVioConfigured(vals,ucl,lcl,m);
+  // Use override-aware params so edits propagate to KPIs and chart
+  const {vals,m,sw,ucl,lcl,lim,cap,vios,usl,lsl}=getActiveParams(col);
+  if(!vals.length)return;
   const hv=vios.filter(v=>v.severity==='HIGH').length;
   const cpkColor=cap.cpk?(cap.cpk>=1.33?'good':cap.cpk>=1?'warn':'bad'):'neutral';
   document.getElementById('ichart-title').textContent=col+' — I-Chart';
@@ -1319,59 +1557,88 @@ function renderOverviewTab(){
     {data:Array(vals.length).fill(s1u),borderColor:'rgba(46,204,113,0.4)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'+1σ',tension:0},
     {data:Array(vals.length).fill(s1l),borderColor:'rgba(46,204,113,0.4)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'-1σ',tension:0},
     {data:Array(vals.length).fill(m),borderColor:'rgba(124,106,247,0.6)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,label:'Mean',tension:0},
-    {data:vals,borderColor:'#00e5c0',borderWidth:1.5,pointRadius:2.5,pointBackgroundColor:vals.map((v,i)=>vio[i]?'#f04e4e':'#00e5c0'),fill:false,tension:.1,label:col},
+    {data:vals,borderColor:'#00e5c0',borderWidth:1.5,pointRadius:vals.length>200?0:2.5,pointBackgroundColor:vals.map((v,i)=>vio[i]?'#f04e4e':'#00e5c0'),fill:false,tension:.05,label:col},
     {data:vio,borderColor:'transparent',pointRadius:6,pointBackgroundColor:'rgba(240,78,78,0.9)',showLine:false,label:'OOC'},
   ];
   if(lim.usl!=null)ds.push({data:Array(vals.length).fill(lim.usl),borderColor:'rgba(245,166,35,0.9)',borderWidth:1.5,borderDash:[8,4],pointRadius:0,fill:false,label:'USL',tension:0});
   if(lim.lsl!=null)ds.push({data:Array(vals.length).fill(lim.lsl),borderColor:'rgba(245,166,35,0.9)',borderWidth:1.5,borderDash:[8,4],pointRadius:0,fill:false,label:'LSL',tension:0});
-  makeChart('ichart-overview',{type:'line',data:{labels:vals.map((_,i)=>i+1),datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:baseScales}});
+  makeChart('ichart-overview',{type:'line',data:{labels:vals.map((_,i)=>i+1),datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},zoom:zoomLine},scales:baseScales}});
   const mrVals=movRange(vals),mrMean=avg(mrVals),mrUCL=3.267*mrMean;
   document.getElementById('mr-meta').textContent=`MR̄=${fmtN(mrMean)}  UCL=${fmtN(mrUCL)}`;
   makeChart('mrchart-overview',{type:'line',data:{labels:mrVals.map((_,i)=>i+2),datasets:[
     {data:Array(mrVals.length).fill(mrUCL),borderColor:'rgba(240,78,78,0.85)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,label:'UCL',tension:0},
     {data:Array(mrVals.length).fill(mrMean),borderColor:'rgba(124,106,247,0.5)',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false,label:'MR̄',tension:0},
     {data:mrVals,borderColor:'#7c6af7',borderWidth:1.5,borderDash:[4,2],pointRadius:3,pointBackgroundColor:mrVals.map(v=>v>mrUCL?'#f04e4e':'#7c6af7'),fill:false,tension:.1,label:'MR'}
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:baseScales}});
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},zoom:zoomLine},scales:baseScales}});
   const tbody=document.getElementById('overview-params-tbody');
   if(tbody)tbody.innerHTML=numCols.map(c=>{
-    const vs=getVals(c),lm=getLimits(c);
+    const vs=getVals(c);
     if(!vs.length)return'';
-    const cm=avg(vs),cs=stdOverall(vs),cc=calcCap(vs,lm.usl,lm.lsl,lm.target);
+    // For activeCol use override-aware cap; for others use cached
+    const {cap:cc,usl:cusl,lsl:clsl}= (c===col) ? getActiveParams(c) : (() => {
+      const lm=getLimits(c); return {cap:calcCap(vs,lm.usl,lm.lsl,lm.target),usl:lm.usl,lsl:lm.lsl};
+    })();
+    const cm=avg(vs),cs=stdOverall(vs),lm={usl:cusl,lsl:clsl};
     const ck=cc.cpk?(cc.cpk>=1.33?'good':cc.cpk>=1?'warn':'bad'):'neutral';
     const st=lm.usl&&lm.lsl?(cc.cpk>=1.33?'<span class="badge badge-low">OK</span>':cc.cpk>=1?'<span class="badge badge-medium">MARGINAL</span>':'<span class="badge badge-high">ACTION</span>'):'—';
-    return`<tr><td style="font-weight:600">${c}</td><td>${fmtN(cm)}</td><td>${fmtN(cs)}</td><td>${fmtN(Math.min(...vs))}</td><td>${fmtN(Math.max(...vs))}</td><td>${lm.usl!=null?fmtN(lm.usl):'—'}</td><td>${lm.lsl!=null?fmtN(lm.lsl):'—'}</td><td class="${ck}">${cc.cpk?cc.cpk.toFixed(3):'—'}</td><td>${st}</td></tr>`;
+    return`<tr${c===col?' style="background:rgba(0,229,192,.04)"':''}><td style="font-weight:600">${c}${c===col?' <span style="font-size:9px;color:var(--primary)">●</span>':''}</td><td>${fmtN(cm)}</td><td>${fmtN(cs)}</td><td>${fmtN(Math.min(...vs))}</td><td>${fmtN(Math.max(...vs))}</td><td>${lm.usl!=null?fmtN(lm.usl):'—'}</td><td>${lm.lsl!=null?fmtN(lm.lsl):'—'}</td><td class="${ck}">${cc.cpk?cc.cpk.toFixed(3):'—'}</td><td>${st}</td></tr>`;
   }).join('');
   document.getElementById('overview-params-meta').textContent=numCols.length+' parameters';
+  // Populate editable overview strip
+  const {m:om,sw:osw,so:oso,lim:olim}=cachedStats(col);
+  const or=calcAllFromParams(_overrides.mean??om,_overrides.sw??osw,_overrides.so??oso,_overrides.usl??olim.usl,_overrides.lsl??olim.lsl);
+  updateOverviewEditInputs(or);
 }
 
 // ─── CAPABILITY TAB ───
 function renderCapabilityTab(){
   const col=document.getElementById('cap-col-select')?.value||activeCol||primaryCol;
   if(col!==activeCol)syncCol(col);
-  const lim=getLimits(col);
+  const {vals,m,sw,so,usl,lsl,target,lim,cap}=getActiveParams(col);
+  if(!vals.length)return;
   const capDiv=document.getElementById('cap-limits-display');
-  if(capDiv)capDiv.innerHTML=`<div style="font-size:11px;color:var(--text-dim);background:var(--card2);padding:6px 12px;border-radius:7px;border:.5px solid var(--border)">USL:<strong>${lim.usl!=null?fmtN(lim.usl):'—'}</strong> LSL:<strong>${lim.lsl!=null?fmtN(lim.lsl):'—'}</strong> Target:<strong>${lim.target!=null?fmtN(lim.target):'—'}</strong> <span style="margin-left:6px;color:var(--primary);cursor:pointer" onclick="openLimitsModal()">✏️ Edit</span></div>`;
-  const vals=getVals(col);if(!vals.length)return;
-  const cap=calcCap(vals,lim.usl,lim.lsl,lim.target);
+  if(capDiv){
+    const hasOv=Object.keys(_overrides).some(k=>_overrides[k]!=null);
+    capDiv.innerHTML='<div style="font-size:11px;color:var(--text-dim);background:var(--card2);padding:6px 12px;border-radius:7px;border:.5px solid '+(hasOv?'rgba(245,166,35,.4)':'var(--border)')+'">'+
+      (hasOv?'<span style="color:#f5a623;font-weight:700">⚠️ Overrides active — </span>':'')+
+      'USL:<strong style="'+(hasOv&&_overrides.usl!=null?'color:#f5a623':'')+'">'+(usl!=null?fmtN(usl):'—')+'</strong> '+
+      'LSL:<strong style="'+(hasOv&&_overrides.lsl!=null?'color:#f5a623':'')+'">'+(lsl!=null?fmtN(lsl):'—')+'</strong> '+
+      'Target:<strong>'+(target!=null?fmtN(target):'—')+'</strong>'+
+      ' <span style="margin-left:6px;color:var(--primary);cursor:pointer" onclick="openLimitsModal()">\u270f\ufe0f Limits</span>'+
+      (hasOv?' <span style="margin-left:6px;color:#f5a623;cursor:pointer" onclick="resetOverrides();renderAllTabs()">\u21ba Reset</span>':'')+
+      '</div>';
+  }
+  const setV=(id,v,cls)=>{const el=document.getElementById(id);if(!el||document.activeElement===el)return;if(el.tagName==='INPUT')el.value=v;else el.textContent=v;if(cls)el.className=(el.className||'').replace(/\b(good|warn|bad)\b/g,'').trim()+' '+cls;};
   const cl=v=>v!=null?(v>=1.33?'good':v>=1?'warn':'bad'):'neutral';
-  const fmt4=v=>v!=null?v.toFixed(4):'N/A';
-  ['cp','cpk','cpu','cpl','pp','ppk','ppu','ppl'].forEach(k=>{const el=document.getElementById('cap-'+k);if(el){el.textContent=fmt4(cap[k]);el.className=cl(cap[k]);}});
-  const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  setEl('cap-mean',fmtN(cap.m));setEl('cap-sw',fmtN(cap.sw));setEl('cap-so',fmtN(cap.so));
-  setEl('cap-sl',cap.sl?cap.sl.toFixed(3):'N/A');setEl('cap-ppmt',cap.ppmT?cap.ppmT.toFixed(1):'N/A');
-  setEl('cap-ppmo',cap.ppmO.toFixed(1));setEl('cap-skew',skew(vals).toFixed(4));
-  setEl('cap-spec',(lim.usl!=null&&lim.lsl!=null)?fmtN(lim.usl-lim.lsl):'N/A');
-  const cpkPct=cap.cpk?Math.min(cap.cpk/2,1)*100:0,ppkPct=cap.ppk?Math.min(cap.ppk/2,1)*100:0;
-  const gst=document.getElementById('cap-gauge-st');if(gst)gst.style.width=cpkPct+'%';
-  const glt=document.getElementById('cap-gauge-lt');if(glt)glt.style.width=ppkPct+'%';
-  const mn=Math.min(...vals),mx=Math.max(...vals),bins=20,binW=(mx-mn)/bins||1;
+  const f4=v=>v!=null?v.toFixed(4):'N/A';
+  setV('cap-cp', f4(cap.cp), cl(cap.cp));
+  setV('cap-cpk',f4(cap.cpk),cl(cap.cpk));
+  setV('cap-cpu',f4(cap.cpu),cl(cap.cpu));
+  setV('cap-cpl',f4(cap.cpl),cl(cap.cpl));
+  setV('cap-pp', f4(cap.pp), cl(cap.pp));
+  setV('cap-ppk',f4(cap.ppk),cl(cap.ppk));
+  setV('cap-ppu',f4(cap.ppu),cl(cap.ppu));
+  setV('cap-ppl',f4(cap.ppl),cl(cap.ppl));
+  setV('cap-mean',fmtN(m));
+  setV('cap-sw',  fmtN(sw));
+  setV('cap-so',  fmtN(so));
+  setV('cap-sl',  cap.sl?cap.sl.toFixed(4):'N/A', cl(cap.sl?cap.sl/3:null));
+  setV('cap-ppmt',cap.ppmT?cap.ppmT.toFixed(1):'N/A');
+  setV('cap-ppmo',cap.ppmO!=null?cap.ppmO.toFixed(1):'N/A');
+  setV('cap-skew',skew(vals).toFixed(4));
+  setV('cap-spec',(usl!=null&&lsl!=null)?fmtN(usl-lsl):'N/A');
+  const gst=document.getElementById('cap-gauge-st');if(gst)gst.style.width=Math.min((cap.cpk||0)/2,1)*100+'%';
+  const glt=document.getElementById('cap-gauge-lt');if(glt)glt.style.width=Math.min((cap.ppk||0)/2,1)*100+'%';
+  const r=calcAllFromParams(m,sw,so,usl,lsl);
+  updateOverviewEditInputs(r);updateSPCStatsStrip(r);
+  const mn=Math.min(...vals),mx=Math.max(...vals),bins=20,bw=(mx-mn)/bins||1;
   const counts=Array(bins).fill(0);
-  vals.forEach(v=>{const b=Math.min(Math.floor((v-mn)/binW),bins-1);counts[b]++});
-  const binLabels=Array(bins).fill(0).map((_,i)=>fmtN(mn+i*binW));
-  makeChart('hist-chart',{type:'bar',data:{labels:binLabels,datasets:[{data:counts,backgroundColor:'rgba(0,229,192,0.3)',borderColor:'rgba(0,229,192,0.7)',borderWidth:1,label:'Count'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:{x:{ticks:{color:tc,maxTicksLimit:8},grid:{color:gc}},y:{ticks:{color:tc},grid:{color:gc}}}}});
+  vals.forEach(v=>{const b=Math.min(Math.floor((v-mn)/bw),bins-1);counts[b]++;});
+  const binLabels=Array(bins).fill(0).map((_,i)=>fmtN(mn+i*bw));
+  const barColors=binLabels.map(l=>{const v=parseFloat(l);return(usl&&v>usl)||(lsl&&v<lsl)?'rgba(240,78,78,0.5)':'rgba(0,229,192,0.35)';});
+  makeChart('hist-chart',{type:'bar',data:{labels:binLabels,datasets:[{data:counts,backgroundColor:barColors,borderColor:'rgba(0,229,192,0.6)',borderWidth:1,label:'Count'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:{x:{ticks:{color:tc,maxTicksLimit:8},grid:{color:gc}},y:{ticks:{color:tc},grid:{color:gc}}}}});
 }
 
-// ─── CORRELATION TAB ───
 function renderCorrelationTab(){
   const yCol=document.getElementById('corr-y-select')?.value||activeCol||primaryCol;
   if(yCol!==activeCol)syncCol(yCol);
@@ -1395,16 +1662,15 @@ function renderScatter(){
   const xVals=getVals(xCol),yVals=getVals(yCol),n=Math.min(xVals.length,yVals.length);
   const r=pearsonR(xVals.slice(0,n),yVals.slice(0,n));
   const rEl=document.getElementById('scatter-r');if(rEl)rEl.innerHTML=`r = <strong style="color:${Math.abs(r)>0.5?'var(--primary)':'var(--text-dim)'}">${r.toFixed(4)}</strong>`;
-  makeChart('scatter-chart',{type:'scatter',data:{datasets:[{data:Array(n).fill(0).map((_,i)=>({x:xVals[i],y:yVals[i]})),backgroundColor:'rgba(0,229,192,0.35)',borderColor:'rgba(0,229,192,0.7)',pointRadius:3.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:{x:{title:{display:true,text:xCol,color:tc,font:{size:11}},ticks:{color:tc},grid:{color:gc}},y:{title:{display:true,text:yCol,color:tc,font:{size:11}},ticks:{color:tc},grid:{color:gc}}}}});
+  makeChart('scatter-chart',{type:'scatter',data:{datasets:[{data:Array(n).fill(0).map((_,i)=>({x:xVals[i],y:yVals[i]})),backgroundColor:'rgba(0,229,192,0.35)',borderColor:'rgba(0,229,192,0.7)',pointRadius:3.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},zoom:zoomBoth},scales:{x:{title:{display:true,text:xCol,color:tc,font:{size:11}},ticks:{color:tc},grid:{color:gc}},y:{title:{display:true,text:yCol,color:tc,font:{size:11}},ticks:{color:tc},grid:{color:gc}}}}});
 }
 
 // ─── VIOLATIONS TAB ───
 function renderViolationsTab(){
   const col=document.getElementById('viol-col-select')?.value||activeCol||primaryCol;
   if(col!==activeCol)syncCol(col);
-  const vals=getVals(col);if(!vals.length)return;
-  const m=avg(vals),sw=sigmaW(vals),ucl=m+3*sw,lcl=m-3*sw;
-  const vios=detectVioConfigured(vals,ucl,lcl,m);
+  const {vals,m,sw,ucl,lcl,vios}=getActiveParams(col);
+  if(!vals.length)return;
   const hv=vios.filter(v=>v.severity==='HIGH').length,mv=vios.filter(v=>v.severity==='MEDIUM').length;
   const vsDiv=document.getElementById('viol-summary');
   if(vsDiv)vsDiv.innerHTML=vios.length?`<span class="badge badge-high">${hv} HIGH</span><span class="badge badge-medium">${mv} MEDIUM</span>`:'<span class="badge badge-low">✅ In Control</span>';
@@ -1491,7 +1757,7 @@ function renderRCATab(){
   makeChart('rca-time-chart',{type:'line',data:{labels:allIdxVals.map(o=>o.i),datasets:[
     {data:allIdxVals.map(o=>o.v),borderColor:'rgba(0,229,192,0.5)',borderWidth:1.5,pointRadius:1.5,fill:false,tension:.1,label:metric},
     {data:allIdxVals.map(o=>o.failed?o.v:null),borderColor:'transparent',pointRadius:7,pointBackgroundColor:'rgba(240,78,78,0.8)',showLine:false,label:'Failure'}
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:baseScales}});
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},zoom:zoomLine},scales:baseScales}});
   renderFishbone();
   const tableCols=['Wafer_ID','Tool_ID','Chamber_ID',...inputCols.slice(0,4),metric];
   const availCols=tableCols.filter(c=>allCols.includes(c));
@@ -1548,11 +1814,9 @@ function renderInsightsTab(){
   if(colSel&&colSel.value!==col)colSel.value=col;
   if(col!==activeCol)syncCol(col);
 
-  const vals=getVals(col);if(!vals.length)return;
-  const lim=getLimits(col);
-  const m=avg(vals),sw=sigmaW(vals),ucl=m+3*sw,lcl=m-3*sw;
-  const cap=calcCap(vals,lim.usl,lim.lsl,lim.target);
-  const vios=detectVioConfigured(vals,ucl,lcl,m),sk=skew(vals);
+  const {vals,m,sw,ucl,lcl,lim,cap,vios,usl,lsl}=getActiveParams(col);
+  if(!vals.length)return;
+  const sk=skew(vals);
 
   // Limits banner — shows exactly what limits are being used
   const banner=document.getElementById('insights-limits-banner');
@@ -1696,7 +1960,7 @@ function renderTrendTab(){
     {data:ciLower,borderColor:'transparent',fill:false,pointRadius:0,showLine:true,tension:.3,label:''},
     {data:actualPad,borderColor:'#00e5c0',borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#00e5c0',fill:false,tension:.1,label:'Actual'},
     {data:forecastPad,borderColor:'#f5a623',borderWidth:2.5,borderDash:[6,3],pointRadius:3,pointBackgroundColor:'#f5a623',fill:false,tension:.1,label:'Forecast'},
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false}},scales:baseScales}});
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{...pluginsDef,legend:{display:false},zoom:zoomLine},scales:baseScales}});
   const cap=calcCap(vals,lim.usl,lim.lsl,lim.target);const cpk=cap.cpk||0;
   const requiredSW=lim.usl&&lim.lsl?(lim.usl-lim.lsl)/(6*targetCpk):null;
   const capGap=targetCpk-cpk;
@@ -1877,6 +2141,9 @@ function generateFactorialDesign(){
 
 // ─── RENDER ALL ───
 function renderAllTabs(){
+  // Reset all lazy flags
+  Object.keys(_tabInitialized).forEach(k=>delete _tabInitialized[k]);
+  // Render core tabs immediately so all data is fresh
   renderOverviewTab();
   renderSPCTab();
   renderCapabilityTab();
@@ -1886,22 +2153,368 @@ function renderAllTabs(){
   renderRCATab();
   renderToolsTab();
   renderInsightsTab();
+  // Heavy/optional tabs render lazily on first visit
 }
 
-// ─── TAB SWITCHER ───
+// ─── TAB SWITCHER (lazy-init) ───
 function switchTab(name){
   const names=['overview','spc','capability','correlation','violations','doe','factorial','rca','tools','wafer','trend','compare','fmea','insights'];
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   const el=document.getElementById('tab-'+name);if(el)el.classList.add('active');
-  // Re-render the tab being visited so it always has latest col + limits
-  // Skip tabs that are independent (compare, fmea, factorial) — they manage their own state
+  // Always re-render on tab switch so charts are always fresh and sized correctly
   const skipRender=['compare','fmea','factorial'];
-  if(!skipRender.includes(name))renderTabById(name);
+  if(!skipRender.includes(name)) renderTabById(name);
 }
+
+// ─── OVERRIDE-AWARE PARAMS ───
+// Single function that returns mean/sw/so/usl/lsl with overrides applied
+// Use this in EVERY tab that displays capability or control limits
+function getActiveParams(col){
+  const s = cachedStats(col);
+  const m   = _overrides.mean   ?? s.m;
+  const sw  = _overrides.sw     ?? s.sw;
+  const so  = _overrides.so     ?? s.so;
+  const usl = _overrides.usl    ?? s.lim.usl;
+  const lsl = _overrides.lsl    ?? s.lim.lsl;
+  const target = _overrides.target ?? s.lim.target;
+  const ucl = m + 3*sw;
+  const lcl = m - 3*sw;
+  const lim = {usl, lsl, target};
+  // Recompute cap and vios with ALL overrides applied
+  const cap  = calcCap(s.vals, usl, lsl, target, m, sw, so);
+  const vios = detectVioConfigured(s.vals, ucl, lcl, m);
+  return {vals:s.vals, m, sw, so, usl, lsl, target, ucl, lcl, lim, cap, vios};
+}
+
+// ═══════════════════════════════════════════════════════
+// ─── BIDIRECTIONAL CALCULATION ENGINE ───
+// ═══════════════════════════════════════════════════════
+
+
+function getCalcParam(key) {
+  // Returns override if user set one, otherwise live value from data
+  if (_overrides[key] !== undefined) return _overrides[key];
+  const col = activeCol || primaryCol;
+  if (!col || !uploadedData.length) return null;
+  const {vals, m, sw, so, lim} = cachedStats(col);
+  const map = { mean: m, sw, so, usl: lim.usl, lsl: lim.lsl, target: lim.target };
+  return map[key] ?? null;
+}
+
+function resetOverrides() {
+  Object.keys(_overrides).forEach(k => delete _overrides[k]);
+  refreshAllEditableDisplays();
+}
+
+// normCDF already defined above — use it directly
+
+function calcAllFromParams(mean, sw, so, usl, lsl) {
+  const f4 = v => v != null ? +v.toFixed(4) : null;
+  const specWidth = (usl != null && lsl != null) ? usl - lsl : null;
+  const ucl = mean + 3 * sw;
+  const lcl = mean - 3 * sw;
+  const cp  = (specWidth && sw > 0) ? specWidth / (6 * sw) : null;
+  const cpu = (usl != null && sw > 0) ? (usl - mean) / (3 * sw) : null;
+  const cpl = (lsl != null && sw > 0) ? (mean - lsl) / (3 * sw) : null;
+  const cpk = (cpu != null && cpl != null) ? Math.min(cpu, cpl) : (cpu ?? cpl);
+  const pp  = (specWidth && so > 0) ? specWidth / (6 * so) : null;
+  const ppu = (usl != null && so > 0) ? (usl - mean) / (3 * so) : null;
+  const ppl = (lsl != null && so > 0) ? (mean - lsl) / (3 * so) : null;
+  const ppk = (ppu != null && ppl != null) ? Math.min(ppu, ppl) : (ppu ?? ppl);
+  const sl  = cpk != null ? cpk * 3 : null;
+  const mrbar = sw * 1.128;
+  const mrucl = 3.267 * mrbar;
+  const ppmT = (usl != null && lsl != null && so > 0)
+    ? (normCDF((lsl - mean) / so) + (1 - normCDF((usl - mean) / so))) * 1e6
+    : null;
+  return { mean, sw, so, usl, lsl, specWidth, ucl, lcl,
+           s1u: mean+sw, s1l: mean-sw, s2u: mean+2*sw, s2l: mean-2*sw,
+           cp, cpu, cpl, cpk, pp, ppu, ppl, ppk, sl, mrbar, mrucl, ppmT };
+}
+
+// ── FORWARD: input changed → recalculate all outputs ──
+function handleCapEdit(field, rawVal) {
+  const val = parseFloat(rawVal);
+  if (isNaN(val)) return;
+
+  const col = activeCol || primaryCol;
+  const {vals, m, sw, so, lim} = cachedStats(col);
+  let mean = getCalcParam('mean') ?? m;
+  let sigma_w = getCalcParam('sw') ?? sw;
+  let sigma_o = getCalcParam('so') ?? so;
+  let usl = getCalcParam('usl') ?? lim.usl;
+  let lsl = getCalcParam('lsl') ?? lim.lsl;
+
+  // Forward inputs — user changed a base parameter
+  if (field === 'mean')  { _overrides.mean = val; mean = val; }
+  if (field === 'sw')    { _overrides.sw = val; sigma_w = val; }
+  if (field === 'so')    { _overrides.so = val; sigma_o = val; }
+
+  // Reverse solve — user typed a desired output value, solve for required input
+  if (field === 'cpk') {
+    // Cpk = min(CPU,CPL). Assuming centered: σ_w = (USL-LSL)/(6×Cpk)
+    if (usl != null && lsl != null && val > 0) {
+      sigma_w = (usl - lsl) / (6 * val);
+      _overrides.sw = sigma_w;
+      showReverseHint('cap-reverse-cpk',
+        `To achieve Cpk = ${val}: reduce σ_within from ${fmtN(sw)} → <strong>${fmtN(sigma_w)}</strong> `+
+        `(${((sw-sigma_w)/sw*100).toFixed(1)}% reduction). `+
+        `Focus: tighten RF Power ±${(sigma_w/sw*8.75).toFixed(1)}W and SiH4 ±${(sigma_w/sw*2.12).toFixed(1)} sccm.`);
+    }
+  }
+  if (field === 'ppk') {
+    if (usl != null && lsl != null && val > 0) {
+      sigma_o = (usl - lsl) / (6 * val);
+      _overrides.so = sigma_o;
+      showReverseHint('cap-reverse-ppk',
+        `To achieve Ppk = ${val}: reduce σ_overall from ${fmtN(so)} → <strong>${fmtN(sigma_o)}</strong> `+
+        `(${((so-sigma_o)/so*100).toFixed(1)}% reduction).`);
+    }
+  }
+  if (field === 'sl') {
+    // Sigma Level = Cpk × 3 → Cpk = SL/3 → σ_w = (USL-LSL)/(6×Cpk)
+    const targetCpk = val / 3;
+    if (usl != null && lsl != null && targetCpk > 0) {
+      sigma_w = (usl - lsl) / (6 * targetCpk);
+      _overrides.sw = sigma_w;
+      showReverseHint('cap-reverse-cpk',
+        `For Sigma Level = ${val} (Cpk = ${targetCpk.toFixed(4)}): `+
+        `σ_within must be ≤ <strong>${fmtN(sigma_w)}</strong> (currently ${fmtN(sw)}).`);
+    }
+  }
+  if (field === 'ppmt') {
+    // PPM = 2 × (1 - Φ(z)) × 1e6 → z = Φ⁻¹(1 - PPM/2e6)
+    // Approximate: for centered process, σ = (USL-mean) / z
+    if (usl != null && mean != null && val > 0 && val < 1e6) {
+      const pHalf = val / 2e6;
+      // Use bisection to solve normCDF(z) = 1-pHalf
+      let lo = 0, hi = 10, z = 3;
+      for (let i = 0; i < 50; i++) {
+        z = (lo + hi) / 2;
+        if (normCDF(z) < 1 - pHalf) lo = z; else hi = z;
+      }
+      sigma_o = (usl - mean) / z;
+      _overrides.so = sigma_o;
+      showReverseHint('cap-reverse-cpk',
+        `For PPM = ${val}: σ_overall must be ≤ <strong>${fmtN(sigma_o)}</strong> `+
+        `(z-score = ${z.toFixed(3)}, currently σ_overall = ${fmtN(so)}).`);
+    }
+  }
+
+  // Recalculate everything and update display
+  const r = calcAllFromParams(mean, sigma_w, sigma_o, usl, lsl);
+  updateCapDisplay(r, vals);
+  updateSPCStatsStrip(r);
+  updateOverviewEditInputs(r);
+}
+
+// ── Update capability tab display ──
+function updateCapDisplay(r, vals) {
+  const fv = (v, d=4) => v != null ? (+v).toFixed(d) : 'N/A';
+  const cl = v => v != null ? (v>=1.33?'good':v>=1?'warn':'bad') : '';
+
+  const set = (id, val, cls='') => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'INPUT') {
+      if (document.activeElement !== el) el.value = val;
+    } else {
+      el.textContent = val;
+    }
+    if (cls) el.className = (el.className.replace(/(good|warn|bad)/g,'')).trim() + ' ' + cls;
+  };
+
+  set('cap-cp',  fv(r.cp),  cl(r.cp));
+  set('cap-cpk', fv(r.cpk), cl(r.cpk));
+  set('cap-cpu', fv(r.cpu), cl(r.cpu));
+  set('cap-cpl', fv(r.cpl), cl(r.cpl));
+  set('cap-pp',  fv(r.pp),  cl(r.pp));
+  set('cap-ppk', fv(r.ppk), cl(r.ppk));
+  set('cap-ppu', fv(r.ppu), cl(r.ppu));
+  set('cap-ppl', fv(r.ppl), cl(r.ppl));
+  set('cap-mean', fv(r.mean, 4));
+  set('cap-sw',   fv(r.sw,  4));
+  set('cap-so',   fv(r.so,  4));
+  set('cap-sl',   r.sl ? r.sl.toFixed(4) : 'N/A', cl(r.sl ? r.sl/3 : null));
+  set('cap-ppmt', r.ppmT ? r.ppmT.toFixed(1) : 'N/A');
+  if (vals) {
+    const obsDefects = vals.filter(v => (r.usl && v > r.usl) || (r.lsl && v < r.lsl)).length;
+    set('cap-ppmo', (obsDefects/vals.length*1e6).toFixed(1));
+  }
+  set('cap-spec', r.specWidth != null ? fmtN(r.specWidth) : 'N/A');
+
+  // Update gauges
+  const gst = document.getElementById('cap-gauge-st');
+  if (gst) gst.style.width = Math.min((r.cpk||0)/2,1)*100+'%';
+  const glt = document.getElementById('cap-gauge-lt');
+  if (glt) glt.style.width = Math.min((r.ppk||0)/2,1)*100+'%';
+
+  // Mark overridden fields
+  ['cap-mean','cap-sw','cap-so'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('is-overridden', !!_overrides[id.replace('cap-','')]);
+  });
+}
+
+// ── Update SPC stats strip below chart header ──
+function updateSPCStatsStrip(r) {
+  const strip = document.getElementById('spc-stats-strip');
+  if (!strip) return;
+
+  const stats = [
+    {label:'USL',  key:'usl',  val:r.usl!=null?fmtN(r.usl):'—',  color:'#f5a623'},
+    {label:'LSL',  key:'lsl',  val:r.lsl!=null?fmtN(r.lsl):'—',  color:'#f5a623'},
+    {label:'Mean', key:'mean', val:fmtN(r.mean), color:''},
+    {label:'σ_w',  key:'sw',   val:fmtN(r.sw),   color:'#00e5c0'},
+    {label:'UCL',  key:'ucl',  val:fmtN(r.ucl),  color:'#f04e4e'},
+    {label:'LCL',  key:'lcl',  val:fmtN(r.lcl),  color:'#f04e4e'},
+    {label:'+2σ',  key:'s2u',  val:fmtN(r.s2u),  color:'#f5a623'},
+    {label:'-2σ',  key:'s2l',  val:fmtN(r.s2l),  color:'#f5a623'},
+  ];
+
+  // Build once
+  if (!strip.children.length) {
+    strip.innerHTML = stats.map(s =>
+      `<span style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:var(--card);border:.5px solid var(--border);border-radius:6px;">
+        <span style="color:var(--text-muted);font-size:10px">${s.label}</span>
+        <input id="spc-stat-${s.key}" class="editable-val"
+          style="width:80px;font-size:12px;${s.color?'color:'+s.color:''}"
+          value="${s.val}" title="Edit to recalculate"
+          onchange="handleSPCStatEdit('${s.label}',this.value)" onfocus="this.select()">
+      </span>`
+    ).join('') +
+    `<button class="btn-sm" style="font-size:10px;padding:3px 9px"
+       onclick="resetOverrides();renderSPCTab()">↺ Reset</button>`;
+    return;
+  }
+
+  // Update non-focused fields only
+  stats.forEach(s => {
+    const inp = document.getElementById('spc-stat-' + s.key);
+    if (!inp || document.activeElement === inp) return;
+    inp.value = s.val;
+  });
+}
+
+// Handle edits from SPC stats strip
+function handleSPCStatEdit(label, rawVal) {
+  const val = parseFloat(rawVal);
+  if (isNaN(val)) return;
+  const col = activeCol || primaryCol;
+  const {lim} = cachedStats(col);
+  if (label === 'USL') { _overrides.usl = val; if(paramLimits[col]) paramLimits[col].usl = val; }
+  if (label === 'LSL') { _overrides.lsl = val; if(paramLimits[col]) paramLimits[col].lsl = val; }
+  if (label === 'Mean') { _overrides.mean = val; }
+  if (label === 'σ_w')  { _overrides.sw = val; }
+  // UCL/LCL/sigma lines reverse-solve for σ
+  if (label === 'UCL') {
+    const m = getCalcParam('mean');
+    if (m != null) { _overrides.sw = (val - m) / 3; }
+  }
+  if (label === 'LCL') {
+    const m = getCalcParam('mean');
+    if (m != null) { _overrides.sw = (m - val) / 3; }
+  }
+  refreshAllEditableDisplays();
+  renderSPCTab();
+}
+
+// ── Update overview edit inputs ──
+function updateOverviewEditInputs(r) {
+  const container = document.getElementById('overview-edit-inputs');
+  if (!container) return;
+
+  // Build inputs ONCE — on subsequent calls just update values of non-focused fields
+  const fields = [
+    {label:'USL',    key:'usl',    val:r.usl,    color:'#f5a623'},
+    {label:'LSL',    key:'lsl',    val:r.lsl,    color:'#f5a623'},
+    {label:'Target', key:'target', val:r.target, color:''},
+    {label:'Mean',   key:'mean',   val:r.mean,   color:''},
+    {label:'σ within',key:'sw',   val:r.sw,     color:'#00e5c0'},
+    {label:'σ overall',key:'so',  val:r.so,     color:''},
+  ];
+
+  // First time: build HTML
+  if (!container.children.length) {
+    container.innerHTML = fields.map(f =>
+      `<label style="display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--text-muted);font-weight:600">
+        ${f.label}
+        <input id="ov-edit-${f.key}" class="editable-val is-input"
+          style="width:100px;font-size:12px;${f.color?'color:'+f.color:''}"
+          value="${f.val != null ? fmtN(f.val) : '—'}"
+          onchange="handleOverviewEdit('${f.key}',this.value)"
+          onfocus="this.select()">
+      </label>`
+    ).join('') +
+    `<button class="btn-sm" style="align-self:flex-end;font-size:10px;padding:4px 10px"
+       onclick="resetOverrides();renderAllTabs()">↺ Reset to data</button>`;
+    return;
+  }
+
+  // Subsequent calls: only update value if input is NOT currently focused
+  fields.forEach(f => {
+    const inp = document.getElementById('ov-edit-' + f.key);
+    if (!inp || document.activeElement === inp) return; // skip focused field
+    inp.value = f.val != null ? fmtN(f.val) : '—';
+  });
+}
+
+function handleOverviewEdit(key, rawVal) {
+  const val = parseFloat(rawVal);
+  if (isNaN(val)) return;
+  _overrides[key] = val;
+  // Push limits back into paramLimits so SPC/capability tabs pick them up
+  const col = activeCol || primaryCol;
+  if (!paramLimits[col]) paramLimits[col] = {usl:null,lsl:null,target:null};
+  if (key==='usl') { paramLimits[col].usl = val; USL = val; }
+  if (key==='lsl') { paramLimits[col].lsl = val; LSL = val; }
+  if (key==='target') { paramLimits[col].target = val; TARGET = val; }
+  invalidateCache();
+  renderAllTabs(); // re-renders capability with overrides now applied
+  refreshAllEditableDisplays(); // sync strip displays after render
+}
+
+function showReverseHint(id, html) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = '⟵ ' + html;
+  el.style.display = 'block';
+}
+
+function refreshAllEditableDisplays() {
+  const col = activeCol || primaryCol;
+  if (!col || !uploadedData.length) return;
+  const {vals, m, sw, so, lim} = cachedStats(col);
+  const mean = _overrides.mean ?? m;
+  const sigma_w = _overrides.sw ?? sw;
+  const sigma_o = _overrides.so ?? so;
+  const usl = _overrides.usl ?? lim.usl;
+  const lsl = _overrides.lsl ?? lim.lsl;
+  const r = calcAllFromParams(mean, sigma_w, sigma_o, usl, lsl);
+  updateCapDisplay(r, vals);
+  updateSPCStatsStrip(r);
+  updateOverviewEditInputs(r);
+}
+
+// Reset calculator overrides
+function resetCalculator() { resetOverrides(); }
 
 // ─── INIT ───
 renderFMEATable();
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </script>
 </body>
