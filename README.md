@@ -71,7 +71,7 @@ Built by **Animesh Thakre** — MS Chemical Engineering, University of Dayton.
 Developed as a portfolio project combining domain expertise in thin film process engineering (SPC, DOE, FMEA, capability analysis) with AI-assisted software development.
 
 📧 thakrea3@udayton.edu  
-🔗 [LinkedIn](https://www.linkedin.com/in/animesh-thakre)
+🔗 [LinkedIn](https://www.linkedin.com/in/animeshthakre)
 
 ---
 
